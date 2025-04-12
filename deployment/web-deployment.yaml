@@ -21,10 +21,6 @@ spec:
         volumeMounts:
         - name: static-content
           mountPath: /usr/share/nginx/html
-        securityContext:
-          runAsUser: 101
-          runAsGroup: 101
-          
       volumes:
       - name: static-content
         persistentVolumeClaim:

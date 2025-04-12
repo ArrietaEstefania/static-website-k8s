@@ -2,13 +2,14 @@ apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: static-pv
+  namespace: static-site-ns
 spec:
   capacity:
     storage: 1Gi
   accessModes:
-    - ReadWriteOnce
+    - ReadOnlyMany
   hostPath:
-    path: /mnt/static-website
+    path: "/mnt/static-website"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -17,7 +18,8 @@ metadata:
   namespace: static-site-ns
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadOnlyMany
   resources:
     requests:
       storage: 1Gi
+  volumeName: static-pv  # Vincula el PVC al PV manual
