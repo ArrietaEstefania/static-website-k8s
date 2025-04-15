@@ -4,9 +4,11 @@ metadata:
   name: static-pvc
 spec:
   capacity:
-    storage: 1Gi
+    storage: 1Gi              # ✅ Este campo tiene que estar así, exactamente
   accessModes:
     - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: standard  # 👈 Este valor debe coincidir con el PVC
   hostPath:
     path: "/mnt/static-website"
 ---
