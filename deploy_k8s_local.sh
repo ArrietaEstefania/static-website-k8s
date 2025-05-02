@@ -7,14 +7,32 @@
 # Descripción: Despliega entorno K8s con contenido web estático desde repositorios Git.
 # ==========================================
 
+# --- Verificar que no se ejecute con sudo ---
+if [ "$(id -u)" = "0" ]; then
+   echo "❌ Este script no debe ejecutarse con sudo o como root."
+   echo "   Por favor, ejecuta el script sin sudo: ./deploy_k8s_local.sh"
+   exit 1
+fi
+
 # --- Variables iniciales (modificables) ---
 REPO_WEB="https://github.com/ArrietaEstefania/static-website"
 REPO_MANIFESTS="https://github.com/ArrietaEstefania/static-website-k8s"
 DIR_WEB="../devops-web"
 DIR_MANIFESTS="."
-MOUNT_STRING="$(realpath $DIR_WEB)"
+MOUNT_STRING="$(realpath $DIR_WEB 2>/dev/null || echo $DIR_WEB)"
 PERFIL="cloud-proyecto"
 NAMESPACE="static-site-ns"
+
+# --- Verificar si estamos en WSL y en una ruta de Windows ---
+if grep -q Microsoft /proc/version && [[ "$PWD" == "/mnt/"* ]]; then
+    echo "⚠️ Estás ejecutando el script desde una ruta de Windows montada en WSL ($PWD)."
+    echo "   Esto puede causar problemas de permisos. Considera mover el proyecto a tu directorio home de Ubuntu."
+    read -p "¿Continuar de todos modos? (s/n): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Ss]$ ]]; then
+        exit 1
+    fi
+fi
 
 # --- Paso 1: Validar dependencias ---
 echo "🔍 Verificando herramientas requeridas..."
@@ -62,28 +80,45 @@ else
     echo "⚠️ La rama 'main' no existe en este repositorio."
 fi
 
-# --- Paso 3: Iniciar Minikube con volumen montado ---
+# --- Paso 3: Detener Minikube si ya existe ---
+echo "🛑 Deteniendo Minikube si está ejecutándose..."
+minikube status -p "$PERFIL" &>/dev/null && minikube stop -p "$PERFIL"
+
+# --- Paso 4: Iniciar Minikube con volumen montado ---
 echo "🚀 Iniciando Minikube con perfil '$PERFIL'..."
 
-minikube start -p "$PERFIL" --driver=docker \
-  --mount --mount-string="$MOUNT_STRING:/mnt/static-website"
+# Intentar iniciar minikube y guardar el resultado
+if ! minikube start -p "$PERFIL" --driver=docker --mount --mount-string="$MOUNT_STRING:/mnt/static-website"; then
+    echo "❌ Error al iniciar Minikube. Abortando."
+    exit 1
+fi
 
-# --- Paso 4: Habilitar métricas ---
+# --- Paso 5: Habilitar métricas ---
 echo "📊 Habilitando el servidor de métricas..."
 minikube addons enable metrics-server -p "$PERFIL"
 
-# --- Paso 5: Aplicar los manifiestos ordenadamente ---
+# --- Paso 6: Aplicar los manifiestos ordenadamente ---
 echo "📂 Aplicando manifiestos desde $DIR_MANIFESTS..."
 
+# Asegurarse de que kubectl esté configurado para usar el perfil de minikube
+eval $(minikube -p "$PERFIL" docker-env)
+
+# Aplicar manifiestos en orden
 kubectl apply -f namespace/
 kubectl apply -f pvc/
 kubectl apply -f deployment/
 kubectl apply -f service/
 kubectl apply -f hpa/
 
-# --- Paso 6: Exponer el servicio ---
-echo "🌐 Exponiendo servicio web en Minikube..."
+# --- Paso 7: Esperar a que los pods estén listos ---
+echo "⏳ Esperando a que los pods estén listos..."
+kubectl wait --namespace="$NAMESPACE" \
+    --for=condition=ready pod \
+    --selector=app=static-web \
+    --timeout=120s
 
+# --- Paso 8: Exponer el servicio ---
+echo "🌐 Exponiendo servicio web en Minikube..."
 minikube service static-web-service -n "$NAMESPACE" -p "$PERFIL"
 
 echo "✅ Entorno desplegado con éxito."
