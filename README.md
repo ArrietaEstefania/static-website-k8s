@@ -40,6 +40,31 @@ CloudTrabajo/
 
 ## 🚀 Instrucciones para levantar el entorno
 
+### Tener en cuenta (Si estamos trabajando desde Windows):
+- **Tener Docker Desktop abierto y con soporte para WSL2 activado**
+- **Desde WSL:**
+- **Andá al directorio donde guardaste el script con**
+
+```bash
+cd /mnt/c/Users/54261/Desktop/CloudTrabajo
+```
+
+- **Dale permisos de ejecución al script con:**
+
+```bash
+chmod +x deploy_k8s_local.sh
+
+```
+
+
+### Ejecutar el Script automatico llamado deploy_k8s_local.sh
+
+```bash
+./deploy_k8s_local.sh
+```
+
+### Ejecucion del entorno paso a paso(sin script)
+
 ### 📥 1. Clonar los repositorios
 
 ```bash
