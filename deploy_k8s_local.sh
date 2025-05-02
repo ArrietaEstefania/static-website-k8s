@@ -1,8 +1,9 @@
 #!/bin/bash
+set -e
 
 # ==========================================
 # Script de despliegue de entorno Minikube
-# Autor: Estudiante ITU - Computación en la Nube
+# Autor: Estudiante ITU Estefania Arrieta - Computación en la Nube
 # Fecha: 2025-05-02
 # Descripción: Despliega entorno K8s con contenido web estático desde repositorios Git.
 # ==========================================
@@ -13,7 +14,7 @@ REPO_MANIFESTS="https://github.com/ArrietaEstefania/static-website-k8s"
 DIR_WEB="devops-web"
 DIR_MANIFESTS="devops-k8s"
 MOUNT_STRING="$(realpath ../$DIR_WEB)"
-PERFIL="cloud-proyecto"
+PERFIL="cloud-proyecto" 
 NAMESPACE="static-site-ns"
 
 # --- Paso 1: Validar dependencias ---
@@ -39,38 +40,51 @@ command -v kubectl >/dev/null 2>&1 || {
     exit 1
 }
 
+# --- Paso 2: Clonar o actualizar repositorios ---
 echo "📁 Clonando o actualizando repositorios..."
 
 # Repositorio del sitio web
 if [ ! -d "../$DIR_WEB" ]; then
     git clone "$REPO_WEB" "../$DIR_WEB"
 else
-    cd "../$DIR_WEB" && git pull && cd - > /dev/null
+    git config --global --add safe.directory "$(realpath ../$DIR_WEB)"
+    cd "../$DIR_WEB" || exit 1
+    git pull origin main || echo "⚠️ No se pudo hacer pull, verifique la rama"
+    cd - > /dev/null
 fi
 
-# Repositorio de los manifiestos
+# Repositorio de manifiestos K8s
 if [ ! -d "../$DIR_MANIFESTS" ]; then
     git clone "$REPO_MANIFESTS" "../$DIR_MANIFESTS"
 else
-    cd "../$DIR_MANIFESTS" && git pull && cd - > /dev/null
+    git config --global --add safe.directory "$(realpath ../$DIR_MANIFESTS)"
+    cd "../$DIR_MANIFESTS" || exit 1
+    git pull origin main || echo "⚠️ No se pudo hacer pull, verifique la rama"
+    cd - > /dev/null
 fi
-
 
 # --- Paso 3: Iniciar Minikube con volumen montado ---
 echo "🚀 Iniciando Minikube con perfil '$PERFIL'..."
 
+# Verificar si el usuario tiene permisos sobre Docker
+if ! docker info >/dev/null 2>&1; then
+    echo "🚫 Tu usuario no tiene permisos sobre Docker."
+    echo "👉 Ejecutá: sudo usermod -aG docker \$USER && newgrp docker"
+    exit 1
+fi
+
 minikube start -p "$PERFIL" --driver=docker \
-  --mount --mount-string="$MOUNT_ST RING:/mnt/static-website"
+  --mount --mount-string="$MOUNT_STRING:/mnt/static-website"
 
 # --- Paso 4: Habilitar métricas ---
 echo "📊 Habilitando el servidor de métricas..."
 
 minikube addons enable metrics-server -p "$PERFIL"
 
-# --- Paso 5: Aplicar los manifiestos ordenadamente ---
+# --- Paso 5: Aplicar manifiestos ---
 echo "📂 Aplicando manifiestos desde $DIR_MANIFESTS..."
 
-cd "$DIR_MANIFESTS" || exit 1
+cd "../$DIR_MANIFESTS" || exit 1
 
 kubectl apply -f namespace/
 kubectl apply -f pvc/
