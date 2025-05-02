@@ -39,20 +39,22 @@ command -v kubectl >/dev/null 2>&1 || {
     exit 1
 }
 
-# --- Paso 2: Clonar o actualizar repos ---
 echo "📁 Clonando o actualizando repositorios..."
 
-if [ ! -d "$DIR_WEB" ]; then
-    git clone "$REPO_WEB" "$DIR_WEB"
+# Repositorio del sitio web
+if [ ! -d "../$DIR_WEB" ]; then
+    git clone "$REPO_WEB" "../$DIR_WEB"
 else
-    cd "$DIR_WEB" && git pull && cd ..
+    cd "../$DIR_WEB" && git pull && cd - > /dev/null
 fi
 
-if [ ! -d "$DIR_MANIFESTS" ]; then
-    git clone "$REPO_MANIFESTS" "$DIR_MANIFESTS"
+# Repositorio de los manifiestos
+if [ ! -d "../$DIR_MANIFESTS" ]; then
+    git clone "$REPO_MANIFESTS" "../$DIR_MANIFESTS"
 else
-    cd "$DIR_MANIFESTS" && git pull && cd ..
+    cd "../$DIR_MANIFESTS" && git pull && cd - > /dev/null
 fi
+
 
 # --- Paso 3: Iniciar Minikube con volumen montado ---
 echo "🚀 Iniciando Minikube con perfil '$PERFIL'..."
