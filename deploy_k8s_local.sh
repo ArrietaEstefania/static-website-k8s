@@ -14,7 +14,6 @@ DIR_WEB="devops-web"
 DIR_MANIFESTS="devops-k8s"
 MOUNT_STRING="$(realpath ../$DIR_WEB)"
 PERFIL="cloud-proyecto"
-MOUNT_STRING="/c/Users/54261/Desktop/CloudTrabajo/$DIR_WEB"
 NAMESPACE="static-site-ns"
 
 # --- Paso 1: Validar dependencias ---
@@ -61,7 +60,7 @@ fi
 echo "🚀 Iniciando Minikube con perfil '$PERFIL'..."
 
 minikube start -p "$PERFIL" --driver=docker \
-  --mount --mount-string="$MOUNT_STRING:/mnt/static-website"
+  --mount --mount-string="$MOUNT_ST RING:/mnt/static-website"
 
 # --- Paso 4: Habilitar métricas ---
 echo "📊 Habilitando el servidor de métricas..."
